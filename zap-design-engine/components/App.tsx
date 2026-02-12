@@ -21,8 +21,10 @@ import DocsInspector from './DocsInspector';
 import SiteMapSection from './SiteMapSection';
 import LivePreview from './LivePreview';
 import { ProjectConfig, ThemeState, Tab, ProjectFile, DocPage, IconEntry, TemplateConfig } from '../types';
+import { ExportModal } from './ExportModal';
 import { standardUiKitData } from './standardUiKit';
 import { STATIC_SITE_NODES, SiteNode } from './appRegistry';
+import { STORAGE_KEYS } from '../constants/storage';
 import {
     getMerchantOverviewBlocks,
     getColorsPageBlocks,
@@ -51,7 +53,6 @@ interface NavItem {
     action?: React.ReactNode;
 }
 
-const HISTORY_KEY = 'zap-design-history-v1';
 
 const DEFAULT_THEME: ThemeState = {
     primary: '#7E22CE',
@@ -97,6 +98,7 @@ const DEFAULT_THEME: ThemeState = {
 };
 
 const DEFAULT_CONFIG: ProjectConfig = {
+    merchantName: '',
     projectName: '',
     businessType: '',
     timezone: '',
@@ -142,11 +144,13 @@ const App: React.FC = () => {
     const [expandedNavItems, setExpandedNavItems] = useState<string[]>(['design-system', 'docs']);
     const [navSearchTerm, setNavSearchTerm] = useState('');
 
+    const [isExportOpen, setIsExportOpen] = useState(false);
+
     const importFileRef = useRef<HTMLInputElement>(null);
 
     // Load History on Mount
     useEffect(() => {
-        const stored = localStorage.getItem(HISTORY_KEY);
+        const stored = localStorage.getItem(STORAGE_KEYS.HISTORY_KEY);
         if (stored) {
             try {
                 setHistory(JSON.parse(stored));
@@ -189,7 +193,7 @@ const App: React.FC = () => {
 
         const newHistory = [newFile, ...history].slice(0, 20); // Keep last 20
         setHistory(newHistory);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+        localStorage.setItem(STORAGE_KEYS.HISTORY_KEY, JSON.stringify(newHistory));
         setHasUnsavedChanges(false);
 
         if (manual) showToast('Version saved successfully', 'success');
@@ -208,7 +212,7 @@ const App: React.FC = () => {
         e.stopPropagation();
         const newHistory = history.filter(h => h.id !== id);
         setHistory(newHistory);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+        localStorage.setItem(STORAGE_KEYS.HISTORY_KEY, JSON.stringify(newHistory));
     };
 
     const handleImportClick = () => importFileRef.current?.click();
@@ -329,6 +333,24 @@ const App: React.FC = () => {
 
     const handleThemeUpdate = (newTheme: ThemeState) => {
         setThemeState(newTheme);
+
+        // Keep projectConfig.generatedContent.colors in sync for exports/history
+        if (projectConfig.generatedContent) {
+            setProjectConfig(prev => ({
+                ...prev,
+                generatedContent: {
+                    ...prev.generatedContent!,
+                    colors: {
+                        ...prev.generatedContent!.colors,
+                        primary: newTheme.primary,
+                        secondary: newTheme.secondary,
+                        background: newTheme.background,
+                        text: newTheme.darkText
+                    }
+                }
+            }));
+        }
+
         setHasUnsavedChanges(true);
     };
 
@@ -716,8 +738,20 @@ const App: React.FC = () => {
                 onOpenProject={() => setIsBrowserOpen(true)}
                 onImportFile={handleImportClick}
                 onSaveVersion={() => saveToHistory(true)}
-                onExportJson={handleCurrentExport}
+                onExport={() => {
+                    handleDocsRegenerateOverview();
+                    setIsExportOpen(true);
+                }}
                 onWorkspaceSettings={() => showToast('Workspace settings coming soon', 'info')}
+            />
+
+            <ExportModal
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                theme={themeState}
+                config={projectConfig}
+                docs={docPages}
+                onToast={showToast}
             />
 
             {/* Main Layout - Toggle content based on ViewMode */}

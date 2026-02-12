@@ -178,22 +178,27 @@ const FormElementInternalContent: React.FC<{
 const FormsSection: React.FC<FormsSectionProps> = ({ themeState, showClassNames = false, setShowClassNames }) => {
     // Interactive State
     const [demoColor, setDemoColor] = useState(themeState.primary);
-    const [phoneValue, setPhoneValue] = useState('');
-    const [currencyValue, setCurrencyValue] = useState('1250.00');
-    const [ratingValue, setRatingValue] = useState(3);
-    const [ccValue, setCcValue] = useState('');
-    const [tags, setTags] = useState<string[]>(['Gluten Free', 'Vegan']);
+    const [phoneValue, setPhoneValue] = useState('0912345678');
+    const [currencyValue, setCurrencyValue] = useState('1250000.00');
+    const [ratingValue, setRatingValue] = useState(4);
+    const [ccValue, setCcValue] = useState('4242 4242 4242 4242');
+    const [tags, setTags] = useState<string[]>(['Gluten Free', 'Vegan', 'Organic']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [dateValue, setDateValue] = useState('1/25/2026');
     const [showCalendar, setShowCalendar] = useState(false);
+
+    // Navigation Dropdown State
+    const [navigationValue, setNavigationValue] = useState('dashboard');
+    const [showNavigationDropdown, setShowNavigationDropdown] = useState(false);
+
     const calendarRef = useRef<HTMLDivElement>(null);
     const [viewDate, setViewDate] = useState(new Date(2026, 0, 25));
-    const [rangeStart, setRangeStart] = useState<Date | null>(new Date());
-    const [rangeEnd, setRangeEnd] = useState<Date | null>(new Date(new Date().setDate(new Date().getDate() + 7)));
+    const [rangeStart, setRangeStart] = useState<Date | null>(new Date(2026, 1, 6));
+    const [rangeEnd, setRangeEnd] = useState<Date | null>(new Date(2026, 1, 13));
     const [timeValue, setTimeValue] = useState('10:30');
     const [showTimeDropdown, setShowTimeDropdown] = useState(false);
     const timeDropdownRef = useRef<HTMLDivElement>(null);
-    const [otpValue, setOtpValue] = useState('');
+    const [otpValue, setOtpValue] = useState('123456');
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const currentMonth = viewDate.getMonth();
     const currentYear = viewDate.getFullYear();
@@ -373,8 +378,23 @@ const FormsSection: React.FC<FormsSectionProps> = ({ themeState, showClassNames 
                             <MultiSelectWidget themeState={themeState} />
                         </FormElementPreview>
 
-                        <FormElementPreview label="Quick Navigate" classLabel=".quick-navigate" showClassNames={showClassNames ?? false} componentName="IconSearchDropdown" stateVar="internal">
-                            <IconSearchDropdown themeState={themeState} />
+                        <FormElementPreview label="Quick Navigate" classLabel=".quick-navigate" showClassNames={showClassNames ?? false} componentName="IconSearchDropdown" stateVar="navigationValue">
+                            <IconSearchDropdown
+                                label="Navigation"
+                                value={navigationValue}
+                                options={[
+                                    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, value: 'dashboard' },
+                                    { id: 'profile', label: 'Profile', icon: User, value: 'profile' },
+                                    { id: 'messages', label: 'Messages', icon: Mail, value: 'messages' },
+                                    { id: 'calendar', label: 'Calendar', icon: Calendar, value: 'calendar' },
+                                    { id: 'security', label: 'Security', icon: Shield, value: 'security' },
+                                    { id: 'settings', label: 'Settings', icon: Settings, value: 'settings' }
+                                ]}
+                                onChange={(val) => setNavigationValue(val)}
+                                themeState={themeState}
+                                isOpen={showNavigationDropdown}
+                                onToggle={() => setShowNavigationDropdown(!showNavigationDropdown)}
+                            />
                         </FormElementPreview>
 
                         <FormElementPreview label="Date Picker" classLabel=".date-picker" showClassNames={showClassNames ?? false} componentName="StandardInput (Date)" stateVar="dateValue">

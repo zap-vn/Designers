@@ -12,6 +12,7 @@ import { useStore } from '../store';
 import { customerApi } from '../services/customer/customer.service';
 import { StandardInput } from './atoms/StandardInput';
 import { Button } from './atoms/Button';
+import { IconSearchDropdown, IconOption } from './atoms/SelectInputs';
 import businessTypesData from '../services/system/SystemBusinessType.json';
 import countriesData from '../services/system/SystemCountry.json';
 import languagesData from '../services/system/SystemLanguage.json';
@@ -47,153 +48,6 @@ interface DropdownOption {
     value: string | number;
 }
 
-// Reusable Custom Dropdown Component
-const CustomDropdown = ({
-    label,
-    value,
-    options,
-    onChange,
-    placeholder = "Select",
-    searchable = false,
-    themeState,
-    isOpen,
-    onToggle,
-    disabled = false,
-    required = false
-}: {
-    label: string;
-    value: string | number;
-    options: (string | DropdownOption)[];
-    onChange: (val: any) => void;
-    placeholder?: string;
-    searchable?: boolean;
-    icon?: React.ElementType;
-    themeState: ThemeState;
-    isOpen: boolean;
-    onToggle: () => void;
-    disabled?: boolean;
-    required?: boolean;
-}) => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const inputRef = useRef<HTMLInputElement>(null);
-
-    const safeTheme = themeState || {
-        primary: '#7E22CE',
-        secondary: '#F3E8FF',
-        lightText: '#FFFFFF',
-        darkText: '#1C1C1E',
-        grayText: '#8E8E93',
-        background: '#FFFFFF',
-        background2: '#F9FAFB',
-        background3: '#F3F4F6',
-        primaryBtnText: '#FFFFFF',
-        secondaryBtnText: '#1C1C1E',
-        tertiaryBtnText: '#7E22CE',
-        borderRadius: 16,
-        btnPaddingX: 24,
-        btnPaddingY: 16,
-        fontFamily: 'Inter',
-        inputBg: '#FFFFFF',
-        inputBorder: '#E5E7EB',
-        activeColor: '#7E22CE'
-    };
-
-    useEffect(() => {
-        if (isOpen && searchable && inputRef.current) {
-            inputRef.current.focus();
-        }
-        if (!isOpen) {
-            setSearchTerm('');
-        }
-    }, [isOpen, searchable]);
-
-    const normalizedOptions: DropdownOption[] = options.map(opt =>
-        typeof opt === 'string' ? { label: opt, value: opt } : opt
-    );
-
-    const filteredOptions = searchable
-        ? normalizedOptions.filter(opt => opt.label.toLowerCase().includes(searchTerm.toLowerCase()))
-        : normalizedOptions;
-
-    const selectedOption = normalizedOptions.find(opt => opt.value === value);
-
-    return (
-        <div className="relative space-y-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <div className="relative">
-                <button
-                    type="button"
-                    onClick={!disabled ? onToggle : undefined}
-                    className={`w-full flex items-center justify-between border transition-all text-left group ${disabled ? 'opacity-70 cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'}`}
-                    style={{
-                        padding: `${safeTheme.btnPaddingY}px ${safeTheme.btnPaddingX}px`,
-                        borderRadius: `${safeTheme.borderRadius}px`,
-                        borderColor: isOpen ? safeTheme.primary : '#E5E7EB',
-                        color: value ? safeTheme.darkText : safeTheme.grayText,
-                        fontFamily: safeTheme.fontFamily,
-                        boxShadow: isOpen ? `0 0 0 4px ${safeTheme.primary}20` : 'none'
-                    }}
-                >
-                    <span className="truncate pr-8 text-sm font-medium">{selectedOption?.label || placeholder}</span>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                        <ChevronDown size={18} />
-                    </div>
-                </button>
-
-                {isOpen && !disabled && (
-                    <div
-                        className="absolute top-full left-0 w-full mt-2 bg-white shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200"
-                        style={{
-                            fontFamily: safeTheme.fontFamily,
-                            borderRadius: `${safeTheme.borderRadius}px`
-                        }}
-                    >
-                        {searchable && (
-                            <div className="p-2 border-b border-gray-100">
-                                <div className="relative">
-                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        placeholder="Search..."
-                                        className="w-full bg-gray-50 rounded-md pl-9 pr-3 py-2 text-sm outline-none"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        style={{ color: safeTheme.darkText }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        <div className="max-h-60 overflow-y-auto">
-                            {filteredOptions.length > 0 ? (
-                                filteredOptions.map((opt) => (
-                                    <div
-                                        key={opt.value}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onChange(opt.value);
-                                            onToggle(); // Close on select
-                                        }}
-                                        className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm flex items-center justify-between transition-colors"
-                                        style={{ color: value === opt.value ? safeTheme.tertiaryBtnText : safeTheme.darkText }}
-                                    >
-                                        <span className={value === opt.value ? 'font-bold' : 'font-medium'}>{opt.label}</span>
-                                        {value === opt.value && <Check size={14} style={{ color: safeTheme.tertiaryBtnText }} />}
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="p-4 text-center text-xs text-gray-400">No results found</div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
 
 const useFontLoader = (fontFamily: string) => {
     useEffect(() => {
@@ -326,12 +180,53 @@ const SetupPage: React.FC<SetupPageProps> = ({
 
     useFontLoader(safeTheme.fontFamily);
 
-    const businessTypes = businessTypesData.map(item => ({ label: item.BussinessType_en, value: item.SystemBussinessTypeId }));
-    const countries = countriesData.map(item => ({ label: item.Country, value: item.CountryId }));
-    const languages = languagesData.map(item => ({ label: item.DisplayName, value: item.Id }));
-    const timezones = timezonesData.map(item => ({ label: item.DisplayName, value: item.TimeZoneId }));
-    const dateFormats = dateFormatsData.map(item => ({ label: item.DisplayFormat, value: item.SystemFormatDateId }));
-    const timeFormats = timeFormatsData.map(item => ({ label: item.Time, value: item.TimeId }));
+    const businessTypes: IconOption[] = (businessTypesData as any[]).map(item => ({
+        id: item.SystemBussinessTypeId,
+        label: item.BussinessType_en,
+        description: item.BussinessType_vi || "Industry",
+        value: item.SystemBussinessTypeId,
+        icon: Briefcase
+    }));
+
+    const countries: IconOption[] = (countriesData as any[]).map(item => ({
+        id: item.CountryId,
+        label: item.Country,
+        description: item.Region || item.FullName || "Location",
+        value: item.CountryId,
+        icon: MapPin
+    }));
+
+    const languages: IconOption[] = (languagesData as any[]).map(item => ({
+        id: item.Id,
+        label: item.DisplayName,
+        description: item.EnglishName || "Language",
+        value: item.Id,
+        icon: Globe
+    }));
+
+    const timezones: IconOption[] = (timezonesData as any[]).map(item => ({
+        id: item.TimeZoneId,
+        label: item.DisplayName,
+        description: item.BaseUtcOffset || "Timezone",
+        value: item.TimeZoneId,
+        icon: Clock
+    }));
+
+    const dateFormats: IconOption[] = (dateFormatsData as any[]).map(item => ({
+        id: item.SystemFormatDateId,
+        label: item.DisplayFormat,
+        description: "Standard Format",
+        value: item.SystemFormatDateId,
+        icon: Calendar
+    }));
+
+    const timeFormats: IconOption[] = (timeFormatsData as any[]).map(item => ({
+        id: item.TimeId,
+        label: item.Time,
+        description: "Clock Format",
+        value: item.TimeId,
+        icon: Clock
+    }));
 
     const getCountryDefaults = (countryId: number | string) => {
         switch (Number(countryId)) {
@@ -624,18 +519,19 @@ const SetupPage: React.FC<SetupPageProps> = ({
                         </ContainerDevWrapper>
 
                         <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "BusinessTypeSelect", type: "Field", value: String(formData.businessType), filePath: "state.formData.businessType" }}>
-                            <CustomDropdown
+                            <IconSearchDropdown
                                 label="Business Type"
                                 value={formData.businessType}
                                 options={businessTypes}
                                 onChange={(val) => setFormData({ ...formData, businessType: val })}
-                                placeholder="Select Type"
                                 icon={Briefcase}
                                 themeState={safeTheme}
                                 isOpen={activeDropdown === 'businessType'}
                                 onToggle={toggleDropdown('businessType')}
                                 disabled={isExtracting || readOnly}
                                 required
+                                searchable={false}
+                                hideLayoutToggle={true}
                             />
                         </ContainerDevWrapper>
 
@@ -763,80 +659,84 @@ const SetupPage: React.FC<SetupPageProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "CountrySelect", type: "Field", value: String(formData.country), filePath: "state.formData.country" }}>
-                        <CustomDropdown
+                        <IconSearchDropdown
                             label="Country"
                             value={formData.country}
                             options={countries}
                             onChange={(val) => setFormData({ ...formData, country: val })}
-                            placeholder="Search Country"
-                            searchable
                             icon={MapPin}
                             themeState={safeTheme}
                             isOpen={activeDropdown === 'country'}
                             onToggle={toggleDropdown('country')}
                             disabled={isExtracting || readOnly}
                             required
+                            searchable={false}
+                            hideLayoutToggle={true}
                         />
                     </ContainerDevWrapper>
 
                     <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "LanguageSelect", type: "Field", value: String(formData.language), filePath: "state.formData.language" }}>
-                        <CustomDropdown
+                        <IconSearchDropdown
                             label="Language"
                             value={formData.language}
                             options={languages}
                             onChange={(val) => setFormData({ ...formData, language: val })}
-                            placeholder="Language"
                             icon={Globe}
                             themeState={safeTheme}
                             isOpen={activeDropdown === 'language'}
                             onToggle={toggleDropdown('language')}
                             disabled={isExtracting || readOnly}
+                            searchable={false}
+                            hideLayoutToggle={true}
                         />
                     </ContainerDevWrapper>
 
                     <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "DateFormatSelect", type: "Field", value: String(formData.dateFormat), filePath: "state.formData.dateFormat" }}>
-                        <CustomDropdown
+                        <IconSearchDropdown
                             label="Date Format"
                             value={formData.dateFormat}
                             options={dateFormats}
                             onChange={(val) => setFormData({ ...formData, dateFormat: val })}
-                            placeholder="Format"
                             icon={Calendar}
                             themeState={safeTheme}
                             isOpen={activeDropdown === 'dateFormat'}
                             onToggle={toggleDropdown('dateFormat')}
                             disabled={isExtracting || !formData.country || readOnly}
+                            searchable={false}
+                            hideLayoutToggle={true}
                         />
                     </ContainerDevWrapper>
 
                     <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "TimeFormatSelect", type: "Field", value: String(formData.timeFormat), filePath: "state.formData.timeFormat" }}>
-                        <CustomDropdown
+                        <IconSearchDropdown
                             label="Time Format"
                             value={formData.timeFormat}
                             options={timeFormats}
                             onChange={(val) => setFormData({ ...formData, timeFormat: val })}
-                            placeholder="Format"
                             icon={Clock}
                             themeState={safeTheme}
                             isOpen={activeDropdown === 'timeFormat'}
                             onToggle={toggleDropdown('timeFormat')}
                             disabled={isExtracting || !formData.country || readOnly}
+                            searchable={false}
+                            hideLayoutToggle={true}
                         />
                     </ContainerDevWrapper>
 
                     <div className="md:col-span-2">
                         <ContainerDevWrapper showClassNames={showClassNames} identity={{ displayName: "TimezoneSelect", type: "Field", value: String(formData.timezone), filePath: "state.formData.timezone" }}>
-                            <CustomDropdown
+                            <IconSearchDropdown
                                 label="Time Zone"
                                 value={formData.timezone}
                                 options={timezones}
                                 onChange={(val) => setFormData({ ...formData, timezone: val })}
-                                placeholder="Select Zone"
                                 icon={Clock}
                                 themeState={safeTheme}
                                 isOpen={activeDropdown === 'timezone'}
                                 onToggle={toggleDropdown('timezone')}
                                 disabled={isExtracting || readOnly}
+                                searchable={false}
+                                hideLayoutToggle={true}
                             />
                         </ContainerDevWrapper>
                     </div>

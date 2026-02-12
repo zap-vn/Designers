@@ -26,10 +26,12 @@ import SiteMapInspector from '@/components/SiteMapInspector';
 import ProjectInspector from '@/components/ProjectInspector';
 import LivePreview from '@/components/LivePreview';
 import { AiSettingsModal } from '@/components/AiSettingsModal';
+import { ExportModal } from '@/components/ExportModal';
 import { ProjectConfig, ThemeState, Tab, ProjectFile, DocPage, IconEntry, TemplateConfig } from '@/types';
 import { useStore } from '@/store';
 import { standardUiKitData } from '@/components/standardUiKit';
 import { STATIC_SITE_NODES, SiteNode } from '@/components/appRegistry';
+import { STORAGE_KEYS } from '@/constants/storage';
 import pkg from '../package.json';
 import {
     getMerchantOverviewBlocks,
@@ -60,8 +62,6 @@ interface NavItem {
     children?: NavItem[];
     action?: React.ReactNode;
 }
-
-const HISTORY_KEY = 'zap-design-history-v1';
 
 const DEFAULT_THEME: ThemeState = {
     primary: '#7E22CE',
@@ -126,26 +126,33 @@ const Home: React.FC = () => {
         isSetupComplete, setIsSetupComplete,
         activeTab, setActiveTab,
         projectConfig, setProjectConfig,
-        computedTheme: themeState, // Alias to minimize refactor impact
+        computedTheme: themeState,
         setMerchantOverride,
         activeDocPageId, setActiveDocPageId,
         docPages, setDocPages,
         userRole,
+        hasUnsavedChanges,
+        saveToStorage,
+        loadFromStorage,
         logout
     } = useStore();
 
     // --- Local UI State ---
     const [viewMode, setViewMode] = useState<ViewMode>('builder');
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [history, setHistory] = useState<ProjectFile[]>([]);
     const [isBrowserOpen, setIsBrowserOpen] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
+
+    useEffect(() => {
+        loadFromStorage();
+    }, []);
 
     const [showClassNames, setShowClassNames] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isExplorerOpen, setIsExplorerOpen] = useState(true);
     const [isInspectorOpen, setIsInspectorOpen] = useState(true);
     const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
+    const [isExportOpen, setIsExportOpen] = useState(false);
 
     const [activeUiKitCategory, setActiveUiKitCategory] = useState('Brand Colors');
     const [activeTemplateSection, setActiveTemplateSection] = useState('Global Navbar');
@@ -166,7 +173,7 @@ const Home: React.FC = () => {
 
     // Load History on Mount
     useEffect(() => {
-        const stored = localStorage.getItem(HISTORY_KEY);
+        const stored = localStorage.getItem(STORAGE_KEYS.HISTORY_KEY);
         if (stored) {
             try {
                 setHistory(JSON.parse(stored));
@@ -214,12 +221,14 @@ const Home: React.FC = () => {
             docs: docPages
         };
 
-        const newHistory = [newFile, ...history].slice(0, 20); // Keep last 20
+        const newHistory = [newFile, ...history].slice(0, 20);
         setHistory(newHistory);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
-        setHasUnsavedChanges(false);
+        localStorage.setItem(STORAGE_KEYS.HISTORY_KEY, JSON.stringify(newHistory));
 
-        if (manual) showToast('Version saved successfully', 'success');
+        // Finalize storage save
+        saveToStorage();
+
+        if (manual) showToast('All changes saved to storage', 'success');
     };
 
     const loadVersion = (file: ProjectFile) => {
@@ -235,7 +244,7 @@ const Home: React.FC = () => {
         e.stopPropagation();
         const newHistory = history.filter(h => h.id !== id);
         setHistory(newHistory);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+        localStorage.setItem(STORAGE_KEYS.HISTORY_KEY, JSON.stringify(newHistory));
     };
 
     const handleImportClick = () => importFileRef.current?.click();
@@ -354,7 +363,6 @@ const Home: React.FC = () => {
         setActiveDocPageId('overview');
 
         setIsSetupComplete(true);
-        setHasUnsavedChanges(true);
     };
 
     const handleSetupImport = (file: ProjectFile) => {
@@ -364,12 +372,28 @@ const Home: React.FC = () => {
 
     const handleThemeUpdate = (newTheme: ThemeState) => {
         setMerchantOverride(newTheme);
-        setHasUnsavedChanges(true);
+
+        // Keep projectConfig.generatedContent.colors in sync for exports/history
+        if (projectConfig.generatedContent) {
+            setProjectConfig({
+                ...projectConfig,
+                generatedContent: {
+                    ...projectConfig.generatedContent,
+                    colors: {
+                        ...projectConfig.generatedContent.colors,
+                        primary: newTheme.primary,
+                        secondary: newTheme.secondary,
+                        background: newTheme.background,
+                        text: newTheme.darkText
+                    }
+                }
+            });
+        }
+
     };
 
     const handleConfigUpdate = (newConfig: ProjectConfig) => {
         setProjectConfig(newConfig);
-        setHasUnsavedChanges(true);
     };
 
     const handleTemplateConfigUpdate = (newTemplateConfig: TemplateConfig) => {
@@ -377,7 +401,6 @@ const Home: React.FC = () => {
             ...prev,
             templateConfig: { ...prev.templateConfig, ...newTemplateConfig }
         }));
-        setHasUnsavedChanges(true);
     };
 
     const handleIconsUpdate = (newIcons: IconEntry[]) => {
@@ -386,7 +409,6 @@ const Home: React.FC = () => {
             ...prev,
             generatedContent: { ...prev.generatedContent!, icons: newIcons }
         }));
-        setHasUnsavedChanges(true);
     };
 
     // Docs
@@ -402,19 +424,16 @@ const Home: React.FC = () => {
         setActiveDocPageId(newPage.id);
         setActiveTab('docs');
         if (!expandedNavItems.includes('docs')) setExpandedNavItems(prev => [...prev, 'docs']);
-        setHasUnsavedChanges(true);
     };
 
     const handleDocsDeletePage = (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         setDocPages(prev => prev.filter(p => p.id !== id));
         if (activeDocPageId === id) setActiveDocPageId(null);
-        setHasUnsavedChanges(true);
     };
 
     const handleDocsUpdatePage = (id: string, updates: Partial<DocPage>) => {
         setDocPages(prev => prev.map(p => p.id === id ? { ...p, ...updates, lastModified: Date.now() } : p));
-        setHasUnsavedChanges(true);
     };
 
     const handleDocsRegenerateOverview = () => {
@@ -754,9 +773,21 @@ const Home: React.FC = () => {
                 onOpenProject={() => setIsBrowserOpen(true)}
                 onImportFile={handleImportClick}
                 onSaveVersion={() => saveToHistory(true)}
-                onExportJson={handleCurrentExport}
+                onExport={() => {
+                    handleDocsRegenerateOverview();
+                    setIsExportOpen(true);
+                }}
                 onWorkspaceSettings={() => setIsAiSettingsOpen(true)}
                 onLogout={logout}
+            />
+
+            <ExportModal
+                isOpen={isExportOpen}
+                onClose={() => setIsExportOpen(false)}
+                theme={themeState}
+                config={projectConfig}
+                docs={docPages}
+                onToast={showToast}
             />
 
             <AiSettingsModal
@@ -840,19 +871,24 @@ const Home: React.FC = () => {
                                     )}
                                 </div>
 
-                                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
-                                    <button
-                                        onClick={() => saveToHistory(true)} // Manual save
-                                        disabled={!hasUnsavedChanges}
-                                        className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${hasUnsavedChanges
-                                            ? 'bg-purple-600 text-white hover:bg-purple-700'
-                                            : 'bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-400 cursor-not-allowed'
-                                            }`}
-                                        style={hasUnsavedChanges ? { backgroundColor: themeState.primary } : {}}
-                                    >
-                                        <Save size={14} />
-                                        {hasUnsavedChanges ? 'Save Changes' : 'All Saved'}
-                                    </button>
+                                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-black dark:bg-slate-700 flex items-center justify-center text-white text-[10px] font-bold shrink-0 shadow-sm">
+                                            N
+                                        </div>
+                                        <button
+                                            onClick={() => saveToHistory(true)}
+                                            disabled={!hasUnsavedChanges}
+                                            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all shadow-sm ${hasUnsavedChanges
+                                                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                                : 'bg-gray-100 dark:bg-slate-800 text-gray-400 cursor-not-allowed border border-gray-200 dark:border-slate-700'
+                                                }`}
+                                            style={hasUnsavedChanges ? { backgroundColor: themeState.primary } : {}}
+                                        >
+                                            <Save size={14} />
+                                            {hasUnsavedChanges ? 'Save Changes' : 'Saved'}
+                                        </button>
+                                    </div>
                                     <div className="mt-3 flex items-center justify-center">
                                         <span className="text-[9px] font-black text-gray-300 dark:text-slate-600 uppercase tracking-[0.2em]">
                                             Linked Version — v{projectConfig.version || pkg.version}
@@ -1080,6 +1116,7 @@ const Home: React.FC = () => {
                     </>
                 )}
             </div>
+
         </div>
     );
 };

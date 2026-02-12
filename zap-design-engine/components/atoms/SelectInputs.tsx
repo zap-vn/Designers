@@ -285,29 +285,74 @@ export const DropdownSearchWidget = ({ themeState }: { themeState: ThemeState })
     );
 };
 
-export const IconSearchDropdown = ({ themeState }: { themeState: ThemeState }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [selected, setSelected] = useState('Dashboard');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+export interface IconOption {
+    id: string | number;
+    label: string;
+    description?: string;
+    image?: string;
+    icon?: React.ElementType;
+    value?: string | number;
+}
+
+interface IconSearchDropdownProps {
+    label: string;
+    value: string | number;
+    options: IconOption[];
+    onChange: (val: any) => void;
+    themeState: ThemeState;
+    isOpen: boolean;
+    onToggle: () => void;
+    disabled?: boolean;
+    required?: boolean;
+    icon?: React.ElementType; // Icon for the trigger
+    searchable?: boolean;
+    initialViewMode?: 'grid' | 'list';
+    hideLayoutToggle?: boolean;
+}
+
+export const IconSearchDropdown: React.FC<IconSearchDropdownProps> = ({
+    label,
+    value,
+    options,
+    onChange,
+    themeState,
+    isOpen,
+    onToggle,
+    disabled = false,
+    required = false,
+    icon: TriggerIcon = Search,
+    searchable = true,
+    initialViewMode = 'list',
+    hideLayoutToggle = false
+}) => {
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialViewMode);
+    const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
-    const items = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'profile', label: 'Profile', icon: User },
-        { id: 'messages', label: 'Messages', icon: Mail },
-        { id: 'calendar', label: 'Calendar', icon: Calendar },
-        { id: 'security', label: 'Security', icon: Shield },
-        { id: 'settings', label: 'Settings', icon: Settings }
-    ];
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen && searchable && inputRef.current) {
+            inputRef.current.focus();
+        }
+        if (!isOpen) setSearchQuery('');
+    }, [isOpen, searchable]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) setIsOpen(false);
+            if (isOpen && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                onToggle();
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [isOpen, onToggle]);
 
-    const selectedItem = items.find(i => i.label === selected) || items[0];
+    const filteredOptions = options.filter(opt =>
+        opt.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (opt.description && opt.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    const selectedItem = options.find(i => i.value === value || i.label === value || i.id === value);
     const variant = themeState.formVariant || 'outlined';
     const isActive = isOpen;
     const ringColor = (themeState.activeColor || themeState.primary);
@@ -315,48 +360,127 @@ export const IconSearchDropdown = ({ themeState }: { themeState: ThemeState }) =
 
     return (
         <div className="relative" ref={containerRef}>
-            <label style={{ color: themeState.formLabelColor || themeState.darkText, fontSize: '12px', fontWeight: 700, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: themeState.fontFamily }}>Quick Navigate</label>
+            <label style={{ color: themeState.formLabelColor || themeState.darkText, fontSize: '12px', fontWeight: 700, marginBottom: '6px', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: themeState.fontFamily }}>
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between transition-all text-left"
+                type="button"
+                onClick={!disabled ? onToggle : undefined}
+                className={`w-full flex items-center justify-between transition-all text-left ${disabled ? 'opacity-70 cursor-not-allowed bg-gray-50' : 'cursor-pointer bg-white'}`}
                 style={{
                     backgroundColor: variant === 'filled' ? (themeState.inputFilledBg || '#F3F4F6') : (themeState.inputBg || '#FFFFFF'),
                     borderColor: borderColor,
                     borderBottomColor: variant === 'underlined' ? (isActive ? ringColor : (themeState.inputBorder || '#E5E7EB')) : borderColor,
                     borderWidth: variant === 'underlined' ? '0 0 2px 0' : '1px',
                     borderRadius: variant === 'underlined' ? '0' : `${themeState.borderRadius}px`,
-                    padding: `${themeState.inputPaddingY || 12}px ${themeState.inputPaddingX || 16}px`,
+                    padding: selectedItem?.description ? '10px 16px' : `${themeState.inputPaddingY || 12}px ${themeState.inputPaddingX || 16}px`,
                     boxShadow: (isOpen && variant !== 'underlined') ? `0 0 0 ${themeState.formRingWidth || 4}px ${themeState.activeColor || themeState.primary}20` : 'none',
                     color: themeState.formTextColor || themeState.darkText
                 }}
             >
-                <div className="flex items-center gap-3">
-                    <selectedItem.icon size={18} style={{ color: themeState.primary }} />
-                    <span className="text-sm font-medium" style={{ fontFamily: themeState.fontFamily }}>{selectedItem.label}</span>
-                </div>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {isOpen && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 p-2" style={{ borderRadius: `${themeState.borderRadius}px` }}>
-                    <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-gray-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Layout</span>
-                        <div className="flex bg-gray-100 rounded-lg p-0.5">
-                            <button onClick={(e) => { e.stopPropagation(); setViewMode('grid'); }} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
-                                <LayoutGrid size={12} />
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setViewMode('list'); }} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
-                                <List size={12} />
-                            </button>
+                <div className="flex items-center gap-3 overflow-hidden">
+                    {selectedItem?.image ? (
+                        <div className="w-9 h-9 rounded-full overflow-hidden border border-gray-100 flex-shrink-0 bg-gray-50">
+                            <img src={selectedItem.image} alt={selectedItem.label} className="w-full h-full object-cover" />
                         </div>
+                    ) : selectedItem?.icon ? (
+                        <div className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                            <selectedItem.icon size={18} style={{ color: themeState.primary }} />
+                        </div>
+                    ) : (
+                        <div className="w-9 h-9 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-white transition-colors">
+                            <TriggerIcon size={18} style={{ color: themeState.primary }} />
+                        </div>
+                    )}
+                    <div className="min-w-0">
+                        <div className="text-sm font-bold truncate leading-tight" style={{ fontFamily: themeState.fontFamily }}>
+                            {selectedItem?.label || 'Select Option'}
+                        </div>
+                        {selectedItem?.description && (
+                            <div className="text-[11px] text-gray-500 truncate mt-0.5 leading-none">{selectedItem.description}</div>
+                        )}
                     </div>
-                    <div className={viewMode === 'grid' ? "grid grid-cols-2 gap-2" : "flex flex-col gap-1"}>
-                        {items.map(item => (
-                            <button key={item.id} onClick={() => { setSelected(item.label); setIsOpen(false); }} className={`rounded-lg transition-colors hover:bg-gray-50 group ${viewMode === 'grid' ? 'flex flex-col items-center justify-center gap-2 p-3' : 'flex items-center gap-3 p-2 w-full text-left'}`} style={{ backgroundColor: selected === item.label ? `${themeState.primary}10` : undefined, borderColor: selected === item.label ? `${themeState.primary}30` : 'transparent', borderWidth: '1px' }}>
-                                <item.icon size={viewMode === 'grid' ? 24 : 18} style={{ color: selected === item.label ? themeState.primary : themeState.grayText }} className="transition-colors group-hover:opacity-80" />
-                                <span className={viewMode === 'grid' ? "text-xs font-bold" : "text-sm font-medium"} style={{ color: selected === item.label ? themeState.primary : themeState.darkText, fontFamily: themeState.fontFamily }}>{item.label}</span>
-                                {viewMode === 'list' && selected === item.label && (<Check size={14} className="ml-auto" style={{ color: themeState.primary }} />)}
-                            </button>
-                        ))}
+                </div>
+                <ChevronDown size={18} className={`text-gray-400 shrink-0 ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isOpen && !disabled && (
+                <div className="absolute top-full left-0 w-full mt-2 bg-white shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 p-2" style={{ borderRadius: `${themeState.borderRadius}px` }}>
+                    {searchable && (
+                        <div className="px-2 pb-2 mb-2 border-b border-gray-100">
+                            <div className="relative">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    placeholder="Search..."
+                                    className="w-full bg-gray-50 rounded-lg pl-9 pr-3 py-2 text-xs outline-none focus:bg-white focus:ring-1 transition-all"
+                                    style={{
+                                        color: themeState.darkText,
+                                        fontFamily: themeState.fontFamily,
+                                        borderColor: '#E5E7EB'
+                                    }}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                            </div>
+                        </div>
+                    )}
+                    {!hideLayoutToggle && (
+                        <div className="flex items-center justify-between px-1 pb-2 mb-2 border-b border-gray-100">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Layout</span>
+                            <div className="flex bg-gray-100 rounded-lg p-0.5">
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setViewMode('list'); }} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                                    <List size={12} />
+                                </button>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setViewMode('grid'); }} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+                                    <LayoutGrid size={12} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    <div className={viewMode === 'grid' ? "grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar" : "flex flex-col gap-1 max-h-68 overflow-y-auto p-1 custom-scrollbar"}>
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map(item => {
+                                const isSelected = item.value === value || item.id === value;
+                                const ItemIcon = item.icon || TriggerIcon;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onChange(item.value || item.id);
+                                            onToggle();
+                                        }}
+                                        className={`rounded-lg transition-all hover:bg-gray-50 group border ${viewMode === 'grid' ? 'flex flex-col items-center justify-center gap-2 p-3 text-center' : 'flex items-center gap-3 p-2.5 w-full text-left'}`}
+                                        style={{
+                                            backgroundColor: isSelected ? `${themeState.primary}10` : 'transparent',
+                                            borderColor: isSelected ? `${themeState.primary}30` : 'transparent'
+                                        }}
+                                    >
+                                        <div className={`shrink-0 flex items-center justify-center ${viewMode === 'grid' ? 'w-12 h-12 rounded-xl mb-1' : 'w-10 h-10 rounded-full'} bg-gray-100 group-hover:bg-white transition-colors overflow-hidden border border-transparent group-hover:border-gray-100`}>
+                                            {item.image ? (
+                                                <img src={item.image} alt={item.label} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <ItemIcon size={viewMode === 'grid' ? 24 : 18} style={{ color: isSelected ? themeState.primary : themeState.grayText }} />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className={viewMode === 'grid' ? "text-[10px] font-bold truncate" : "text-sm font-bold truncate"} style={{ color: isSelected ? themeState.primary : themeState.darkText, fontFamily: themeState.fontFamily }}>
+                                                {item.label}
+                                            </div>
+                                            {viewMode === 'list' && item.description && (
+                                                <div className="text-[11px] text-gray-500 truncate mt-0.5">{item.description}</div>
+                                            )}
+                                        </div>
+                                        {viewMode === 'list' && isSelected && (<Check size={18} className="ml-auto animate-in zoom-in" style={{ color: themeState.primary }} />)}
+                                    </button>
+                                );
+                            })
+                        ) : (
+                            <div className="py-8 text-center text-xs text-gray-400 font-medium">No results found</div>
+                        )}
                     </div>
                 </div>
             )}

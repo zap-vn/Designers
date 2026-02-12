@@ -108,7 +108,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, themeState }) => {
             // Mapping API errors to specific fields if possible, or general error
             const msg = err.message || '';
             if (msg.toLowerCase().includes('merchant')) {
-                setErrors(prev => ({ ...prev, merchantName: 'Merchant not found or inactive.' }));
+                setErrors(prev => ({ ...prev, merchantName: err.message }));
             } else if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('credential')) {
                 setErrors(prev => ({ ...prev, password: 'Incorrect email or password.' }));
             } else {
@@ -118,6 +118,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, themeState }) => {
             setIsLoading(false);
         }
     };
+
+    const isFormEmpty = !merchantName.trim() || !email.trim() || !password.trim();
 
     return (
         <div className="min-h-screen w-full flex flex-col bg-[#F9FAFB]" style={{ fontFamily: themeState.fontFamily }}>
@@ -207,7 +209,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, themeState }) => {
 
                         <Button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || isFormEmpty}
                             themeState={themeState}
                             className="w-full mt-4 group"
                             label={isLoading ? "Authenticating..." : "Sign In"}

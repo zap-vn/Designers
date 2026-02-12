@@ -21,6 +21,6 @@ This skill provides expertise in handling customer-related operations and data s
 
 ## Reference Patterns
 
-- **Task Group**: `task-groups/customer/implementation.md`
-- **Workflow**: `workflows/customer/process.md`
-- **Rules**: `rules/customer/standard.md`
+- **Task Group**: `task-groups/customer/*.md`
+- **Workflow**: `workflows/customer/*.md`
+- **Rules**: `rules/customer/*.md`

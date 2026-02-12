@@ -249,9 +249,11 @@ async function main() {
 
     const recoveryActions = await attemptRecovery(issues);
 
-    // Always fix localhost corruption (aggressive)
-    const corruptionFixes = await fixLocalhostCorruption();
-    recoveryActions.push(...corruptionFixes);
+    // Only fix localhost corruption if explicitly needed or if server issues detected
+    if (issues.hasServerErrors || issues.hasCompileErrors) {
+        const corruptionFixes = await fixLocalhostCorruption();
+        recoveryActions.push(...corruptionFixes);
+    }
 
     // Always refresh IDE problems for clean state
     const problemClearAction = await clearStaleProblems();

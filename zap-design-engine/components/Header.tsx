@@ -18,7 +18,7 @@ interface HeaderProps {
   onOpenProject?: () => void;
   onImportFile?: () => void;
   onSaveVersion?: () => void;
-  onExportJson?: () => void;
+  onExport?: () => void;
   onWorkspaceSettings?: () => void;
   onLogout?: () => void;
   // Role Props
@@ -53,7 +53,7 @@ const Header: React.FC<HeaderProps> = ({
   onOpenProject,
   onImportFile,
   onSaveVersion,
-  onExportJson,
+  onExport,
   onWorkspaceSettings,
   onLogout,
   title = "ZAP",
@@ -132,8 +132,8 @@ const Header: React.FC<HeaderProps> = ({
                 <button onClick={() => { onSaveVersion?.(); setIsProjectMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg flex items-center gap-2.5 transition-colors">
                   <Save size={16} /> Save Version
                 </button>
-                <button onClick={() => { onExportJson?.(); setIsProjectMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg flex items-center gap-2.5 transition-colors">
-                  <Download size={16} /> Export JSON
+                <button onClick={() => { onExport?.(); setIsProjectMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg flex items-center gap-2.5 transition-colors">
+                  <Download size={16} /> Export Studio...
                 </button>
                 <div className="h-px bg-gray-100 my-1"></div>
                 <button onClick={() => { onWorkspaceSettings?.(); setIsProjectMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg flex items-center gap-2.5 transition-colors">

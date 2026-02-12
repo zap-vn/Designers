@@ -3,6 +3,8 @@
  * Handles GET, POST, PUT, DELETE with automatic token injection
  */
 
+import { STORAGE_KEYS } from '../constants/storage';
+
 const getBaseUrl = () => process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 const getHeaders = (customHeaders: Record<string, string> = {}) => {
@@ -16,7 +18,7 @@ const getHeaders = (customHeaders: Record<string, string> = {}) => {
 
     // Auto-inject token from localStorage or Cookies if exists
     if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('accessToken');
+        const token = localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }

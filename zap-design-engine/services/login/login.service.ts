@@ -1,4 +1,5 @@
 import { authService } from '../authService';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 export interface LoginRequest {
     UserName: string;
@@ -35,7 +36,7 @@ export const loginApi = {
 
         // Success handling: Store token if needed
         if (data.AccessToken && typeof window !== 'undefined') {
-            localStorage.setItem('accessToken', data.AccessToken);
+            localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, data.AccessToken);
         }
 
         return data;
